@@ -1,4 +1,4 @@
-Existen  2 formas
+Existen  2 formas de ejecutar los programas
 
 La más complicada consiste en 
 Ejecutar el servidor:	py server_test.py
