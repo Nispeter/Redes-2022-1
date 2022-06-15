@@ -70,9 +70,10 @@ def asym_encr(file_path, file_name):
     return nfile_path
 
 def main(encrypt_opt):
-    #CONEXION TPC 
+    #CONEXION UDP
     ip = socket.gethostbyname(socket.gethostname())
     port = 2222
+    server_add = (ip,port)
 
     server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -85,7 +86,7 @@ def main(encrypt_opt):
     #IDENTIFICACION DE DATOS
     root = tk.Tk()                                  #Obtener root
     root.withdraw()
-    filepath = filedialog.askopenfilename()         #Seleccion de archivo de forma fansy 
+    filepath = filedialog.askopenfilename()         #Seleccion de archivo de forma fansy z
     file_name = os.path.basename(filepath)
     file_size = os.path.getsize(filepath)
 
@@ -101,7 +102,7 @@ def main(encrypt_opt):
 
 
     #FORMATO DE ENVIO: "nombre_del_archivo 'S' tamaño_del_archivo 'S' forma_de_incriptacion "
-    server.send(f"{file_name}{S}{file_size}{S}{encrypt_opt}".encode(FORM))
+    server.sendto(f"{file_name}{S}{file_size}{S}{encrypt_opt}".encode(FORM), server_add)
     # msg = server.recv(SIZE).decode(FORM)
     # print(msg)
 
@@ -111,7 +112,7 @@ def main(encrypt_opt):
             data = file.read(BSIZE)                 #se envian los datos un buffer a la vez
             if not data:
                 break
-            server.sendall(data)
+            server.sendto(data,server_add)
             progress.update(len(data))
 
     server.close()

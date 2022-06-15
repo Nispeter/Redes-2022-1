@@ -71,8 +71,17 @@ def main():
 
     while True: 
         
-        head = server.recv(BSIZE).decode()
-        file_name, file_size,encrypt_opt = head.split(S)  
+        head = server.recvfrom(BSIZE) 
+        file_header, (client_ip,port_rcv) = head
+        file_name, file_size, encrypt_opt = file_header.decode(FORM).split(S)
+        # head: tuple[bytes, tuple[string, int]]
+        # file_name, (file_size, encrypt_opt) = head
+        # file_name: bytes = head[0]
+        # file_size: string = head[1][0]
+        # encrypt_opt: int = head[1][1]
+        # head = (b'large 1073741824 o, ('192.168.0.2', 64211))
+
+        #print(f"{file_name}{S}{file_size}{S}{encrypt_opt}")
 
         if (encrypt_opt == 's'): 
             encr_print = 'sym_deencr'
@@ -93,7 +102,10 @@ def main():
 
         with open(file_name, "wb") as file:
             while True:
-                data = server.recv(BSIZE).decode()
+                head = server.recvfrom(BSIZE)
+                data, *_ = head
+                #*_ basura 
+                
                 if not data:    
                     break
                 file.write(data)
