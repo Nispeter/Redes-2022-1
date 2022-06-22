@@ -7,6 +7,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
+from rudp import RUDPServer
 
 FORM = "utf-8"
 SIZE = 1024
@@ -65,14 +66,17 @@ def main():
     ip = socket.gethostbyname(socket.gethostname())
     port = 2222
 
-    server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    server.bind((ip, port))
+    #server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    #server.bind((ip, port))
+    server = RUDPServer(port);
+
     print("Server is active")
 
     while True: 
         
-        head = server.recvfrom(BSIZE) 
-        file_header, (client_ip,port_rcv) = head
+        head = server.receive() 
+        file_header, address = head
+        server.reply(address, b"header received")
         file_name, file_size, encrypt_opt = file_header.decode(FORM).split(S)
         # head: tuple[bytes, tuple[string, int]]
         # file_name, (file_size, encrypt_opt) = head
@@ -102,8 +106,9 @@ def main():
 
         with open(file_name, "wb") as file:
             while True:
-                head = server.recvfrom(BSIZE)
-                data, *_ = head
+                head = server.receive()
+                data, address = head
+                server.reply(address, b"package received")
                 #*_ basura 
                 
                 if not data:    

@@ -15,6 +15,9 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
 
+from rudp import RUDPClient
+
+
 #Valores para incriptar, tamaño del buffer de entrada y de envio, separador de string para el envio
 FORM = "utf-8"
 SIZE = 1024
@@ -73,9 +76,9 @@ def main(encrypt_opt):
     #CONEXION UDP
     ip = socket.gethostbyname(socket.gethostname())
     port = 2222
-    server_add = (ip,port)
-
-    server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    #server_add = (ip,port)
+    #server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    server = RUDPClient(ip, port)
 
     #GENERACION DE LLAVE ENCRIPTACION SIMETRICA
     if(encrypt_opt == 's'):
@@ -102,7 +105,13 @@ def main(encrypt_opt):
 
 
     #FORMATO DE ENVIO: "nombre_del_archivo 'S' tamaño_del_archivo 'S' forma_de_incriptacion "
-    server.sendto(f"{file_name}{S}{file_size}{S}{encrypt_opt}".encode(FORM), server_add)
+    #server.sendto(f"{file_name}{S}{file_size}{S}{encrypt_opt}".encode(FORM), server_add)
+    try:
+        reply = server.send_recv(f"{file_name}{S}{file_size}{S}{encrypt_opt}".encode(FORM))
+        print(reply)
+    except:
+        print("no response; giving up", file=sys.stderr)
+
     # msg = server.recv(SIZE).decode(FORM)
     # print(msg)
 
@@ -112,10 +121,15 @@ def main(encrypt_opt):
             data = file.read(BSIZE)                 #se envian los datos un buffer a la vez
             if not data:
                 break
-            server.sendto(data,server_add)
+            try:
+                reply = server.send_recv(data)
+                print(reply)
+            except:
+                 print("no response; giving up", file=sys.stderr)
+
+            #server.sendto(data,server_add)
             progress.update(len(data))
 
-    server.close()
     if(encrypt_opt == 's' or encrypt_opt == 'a'):
         os.remove(filepath)
 
