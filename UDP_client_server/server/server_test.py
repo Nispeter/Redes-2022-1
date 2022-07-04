@@ -74,13 +74,11 @@ def recv(file_size, file_name,server):
             file.write(data)
             progress.update(len(data))
 
-def listen(port,server):
-    head = server.receive() 
-    file_header, address = head
-    server.reply(address, bytes(port))
+def listen(file_header,server):
+
     file_name, file_size, encrypt_opt = file_header.decode(FORM).split(S)
 
-    if (encrypt_opt == 's'): 
+    if (encrypt_opt == 's'):
         encr_print = 'sym_deencr'
         original_name = file_name
         file_name = 'encr_' + file_name
@@ -109,25 +107,35 @@ def listen(port,server):
         asym_deencr(original_name, file_name, file_size)
         os.remove(file_name)
         print("unencrypted")
+ 
+def new_socket(new_port, file_header):
+    new_server = RUDPServer(new_port)
+    c1 = threading.Thread(target=listen, args=(file_header,new_server))
+    c1.start()
 
 
 def main():
 
     port = 2222
     server = RUDPServer(port)
-
     print("Server is active")
 
-    while True: 
-        c1 = threading.Thread(target=listen, args=(port,server))
-        c1.start()
-        
-        # if c1.is_alive():
-        #     c2 = threading.Thread(target=listen, args=(port,server))
-        #     c2.start()
-        #     c2.join()
+    client_list = {"client_list":port}
 
-        c1.join()
+    while True: 
+
+        head = server.receive() 
+        file_header, address = head
+
+        new_port = port + len(client_list)
+        client_list[address] = new_port
+        server.reply(address ,new_port)
+
+        new_socket(new_port, file_header)
+
+
+
+        
 
 if __name__ == "__main__":
     main()

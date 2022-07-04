@@ -106,9 +106,9 @@ def main(encrypt_opt):
     #server.sendto(f"{file_name}{S}{file_size}{S}{encrypt_opt}".encode(FORM), server_add)
     try:
         new_port = server.send_recv(f"{file_name}{S}{file_size}{S}{encrypt_opt}".encode(FORM))
-        print(new_port)
+        print(f"Connecting to port {new_port}")
         server = RUDPClient(ip, new_port)
-        
+
     except:
         print("no response; giving up", file=sys.stderr)
 
