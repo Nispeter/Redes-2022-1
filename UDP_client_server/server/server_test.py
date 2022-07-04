@@ -3,6 +3,7 @@ import socket
 from Crypto.Cipher import AES 
 import os
 import hashlib
+import threading
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives import hashes
@@ -59,77 +60,74 @@ def asym_deencr(original_name, file_name, file_size):
     #desencriptamos archivo
     sym_deencr(key,original_name, file_name, file_size, type_encryption = 'asymetric')
     
+def recv(file_size, file_name,server):
+    progress = tqdm.tqdm(range(file_size), f"Receiving {file_name}", unit="B", unit_scale=True, unit_divisor=1024)
 
+    with open(file_name, "wb") as file:
+        while True:
+            head = server.receive()
+            data, address = head
+            server.reply(address, b"package received")
+            
+            if not data:    
+                break
+            file.write(data)
+            progress.update(len(data))
+
+def listen(port,server):
+    head = server.receive() 
+    file_header, address = head
+    server.reply(address, bytes(port))
+    file_name, file_size, encrypt_opt = file_header.decode(FORM).split(S)
+
+    if (encrypt_opt == 's'): 
+        encr_print = 'sym_deencr'
+        original_name = file_name
+        file_name = 'encr_' + file_name
+
+    elif(encrypt_opt == 'a'):
+        encr_print = 'asym_deencr'
+        original_name = file_name
+        file_name = 'encr_' + file_name
+
+    if (encrypt_opt == 'o'): encr_print = 'none'
+
+    print("File name received: ", file_name, "\nFile size received: ", file_size,"\nEncryption Option: ", encr_print)
+    file_size = int(file_size)
+
+    recv(file_size, file_name, server)
+    
+    if (encrypt_opt == 's'):
+        key = key_generation(password, salt)
+        print("un-encrypting")
+        sym_deencr(key, original_name, file_name, file_size)
+        os.remove(file_name)
+        print("unencrypted")
+
+    elif(encrypt_opt == 'a'):
+        print("un-encrypting")
+        asym_deencr(original_name, file_name, file_size)
+        os.remove(file_name)
+        print("unencrypted")
 
 
 def main():
-    ip = socket.gethostbyname(socket.gethostname())
-    port = 2222
 
-    #server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    #server.bind((ip, port))
-    server = RUDPServer(port);
+    port = 2222
+    server = RUDPServer(port)
 
     print("Server is active")
 
     while True: 
+        c1 = threading.Thread(target=listen, args=(port,server))
+        c1.start()
         
-        head = server.receive() 
-        file_header, address = head
-        server.reply(address, b"header received")
-        file_name, file_size, encrypt_opt = file_header.decode(FORM).split(S)
-        # head: tuple[bytes, tuple[string, int]]
-        # file_name, (file_size, encrypt_opt) = head
-        # file_name: bytes = head[0]
-        # file_size: string = head[1][0]
-        # encrypt_opt: int = head[1][1]
-        # head = (b'large 1073741824 o, ('192.168.0.2', 64211))
+        # if c1.is_alive():
+        #     c2 = threading.Thread(target=listen, args=(port,server))
+        #     c2.start()
+        #     c2.join()
 
-        #print(f"{file_name}{S}{file_size}{S}{encrypt_opt}")
-
-        if (encrypt_opt == 's'): 
-            encr_print = 'sym_deencr'
-            original_name = file_name
-            file_name = 'encr_' + file_name
-
-        elif(encrypt_opt == 'a'):
-            encr_print = 'asym_deencr'
-            original_name = file_name
-            file_name = 'encr_' + file_name
-
-        if (encrypt_opt == 'o'): encr_print = 'none'
-
-        print("File name received: ", file_name, "\nFile size received: ", file_size,"\nEncryption Option: ", encr_print)
-        file_size = int(file_size)
-
-        progress = tqdm.tqdm(range(file_size), f"Receiving {file_name}", unit="B", unit_scale=True, unit_divisor=1024)
-
-        with open(file_name, "wb") as file:
-            while True:
-                head = server.receive()
-                data, address = head
-                server.reply(address, b"package received")
-                #*_ basura 
-                
-                if not data:    
-                    break
-                file.write(data)
-                progress.update(len(data))
-
-        progress.update(len(data))        
-        
-        if (encrypt_opt == 's'):
-            key = key_generation(password, salt)
-            print("un-encrypting")
-            sym_deencr(key, original_name, file_name, file_size)
-            os.remove(file_name)
-            print("unencrypted")
-
-        elif(encrypt_opt == 'a'):
-            print("un-encrypting")
-            asym_deencr(original_name, file_name, file_size)
-            os.remove(file_name)
-            print("unencrypted")
+        c1.join()
 
 if __name__ == "__main__":
     main()

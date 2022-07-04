@@ -20,7 +20,7 @@ from rudp import RUDPClient
 
 #Valores para incriptar, tamaño del buffer de entrada y de envio, separador de string para el envio
 FORM = "utf-8"
-SIZE = 1024
+SIZE = 512
 BSIZE = 1024 * 4
 S = ' '
 salt = b'\xe8\xc7BD2\x0e\x12u<\xc9\xee\xa7f\x9cO\xbf'
@@ -76,8 +76,6 @@ def main(encrypt_opt):
     #CONEXION UDP
     ip = socket.gethostbyname(socket.gethostname())
     port = 2222
-    #server_add = (ip,port)
-    #server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server = RUDPClient(ip, port)
 
     #GENERACION DE LLAVE ENCRIPTACION SIMETRICA
@@ -107,23 +105,23 @@ def main(encrypt_opt):
     #FORMATO DE ENVIO: "nombre_del_archivo 'S' tamaño_del_archivo 'S' forma_de_incriptacion "
     #server.sendto(f"{file_name}{S}{file_size}{S}{encrypt_opt}".encode(FORM), server_add)
     try:
-        reply = server.send_recv(f"{file_name}{S}{file_size}{S}{encrypt_opt}".encode(FORM))
-        print(reply)
+        new_port = server.send_recv(f"{file_name}{S}{file_size}{S}{encrypt_opt}".encode(FORM))
+        print(new_port)
+        server = RUDPClient(ip, new_port)
+        
     except:
         print("no response; giving up", file=sys.stderr)
-
-    # msg = server.recv(SIZE).decode(FORM)
-    # print(msg)
 
     progress = tqdm.tqdm(range(file_size), f"Sending {file_name}", unit="B", unit_scale=True, unit_divisor=1024) #actualizacion de la barra de progreso 
     with open(filepath, "rb") as file:
         while True:
-            data = file.read(BSIZE)                 #se envian los datos un buffer a la vez
+            data = file.read(SIZE)                 #se envian los datos un buffer a la vez
             if not data:
+                reply = server.send_recv("")
                 break
             try:
                 reply = server.send_recv(data)
-                print(reply)
+                #print(reply)
             except:
                  print("no response; giving up", file=sys.stderr)
 
@@ -142,7 +140,7 @@ def main(encrypt_opt):
 # py client_test.py -o s, para sifrar simetricamente 
 
 if __name__ == "__main__":
-    par = argparse.ArgumentParser(description="TPC client test")
+    par = argparse.ArgumentParser(description="UDP client test")
     par.add_argument("-o",help="Mode of encryption",default = "o")
     arg = par.parse_args()
     encrypt_opt = arg.o
